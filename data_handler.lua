@@ -23,8 +23,8 @@ function data.Load(player)
 			player:Kick('\nUnable to load data, please rejoin.')
 		end)
 		if (players[player.Name]) then -- Checks if the player is still a child of 'Players'
-			Cache[player] = profile.Data -- Adds the player and their data to the cache
-			return Cache[player]
+			Cache[player] = profile -- Adds the player and their data to the cache
+			return Cache[player].Data
 		else
 			profile:Release() -- Removes session lock and saves data
 		end
@@ -35,7 +35,7 @@ end
 
 function data.Fetch(player)
 	if (Cache[player]) then -- Checks if the player is nil
-		return Cache[player]
+		return Cache[player].Data
 	else
 		warn(player.Name, 'is not in the cache.')
 	end

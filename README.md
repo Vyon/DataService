@@ -8,7 +8,7 @@ returns player data
 ### Fetch
 DataService.Fetch(<player:instance>)
 
-return player data
+returns player data
 
 ### Release
 DataService.Release(<player:instance>)

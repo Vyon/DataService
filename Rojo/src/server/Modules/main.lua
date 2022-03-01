@@ -2,14 +2,8 @@
 local players = game:GetService('Players')
 local replicated_storage = game:GetService('ReplicatedStorage')
 
--- Folders
-local remotes = replicated_storage.Remotes
-
 -- Cache
 local cache = _G.Cache.Create('Data')
-
--- Remotes
-local data_remote = remotes.Data
 
 -- Main Module
 local datastore = {}

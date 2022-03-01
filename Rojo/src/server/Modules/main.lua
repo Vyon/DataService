@@ -1,51 +1,64 @@
 -- Services
 local players = game:GetService('Players')
+local replicated_storage = game:GetService('ReplicatedStorage')
 
--- Modules
-local ps = require(script.Parent.ProfileService)
-local _settings = require(script.Parent.Settings)
+-- Folders
+local remotes = replicated_storage.Remotes
 
--- Data Store Stuff
-local store = ps.GetProfileStore(_settings.store_name, _settings.store_base)
+-- Cache
+local cache = _G.Cache.Create('Data')
 
--- Variables
-local data = {}
-local Cache = {}
+-- Remotes
+local data_remote = remotes.Data
 
--- Module Functions
-function data.Load(player)
-	local profile = store:LoadProfileAsync(tostring(player.UserId), 'ForceLoad') -- Forceloads a player's data
-		
-	if (profile) then -- Checks if the profile exists
-		profile:Reconcile() -- Saves Data
-		profile:ListenToRelease(function() -- Will listen for profile release
-			Cache[player] = nil -- When released sets the players data in the cache to nil
-			player:Kick('\nUnable to load data, please rejoin.')
-		end)
-		if (players[player.Name]) then -- Checks if the player is still a child of 'Players'
-			Cache[player] = profile -- Adds the player and their data to the cache
-			return Cache[player].Data
-		else
-			profile:Release() -- Removes session lock and saves data
+-- Main Module
+local datastore = {}
+
+-- Public Functions
+function datastore.Fetch(puid: number)
+	local tries = 0
+
+	while not cache(puid) do
+		tries += 1
+
+		if (tries > 5) then
+			warn('[Datastore.Fetch]: Failed to collect player data.')
+
+			return
 		end
-	else
-		player:Kick('\nFailure to load data.\n' .. os.date('Time: %I:%M %p\nDate: %x'))
+
+		task.wait(1)
 	end
+
+	return cache(puid)
 end
 
-function data.Fetch(player)
-	if (Cache[player]) then -- Checks if the player is nil
-		return Cache[player].Data
-	else
-		warn(player.Name, 'is not in the cache.')
-	end
-end
+function datastore.Load(player: Instance, profile_store: table)
+	assert(typeof(profile_store) == 'table', 'ProfileStore wasn\'t a table!')
 
-function data.Release(player)
-	local profile = Cache[player]
+	local puid = player.UserId
+	local key = tostring(puid)
+	local profile = profile_store:LoadProfileAsync(key, 'ForceLoad')
+
 	if (profile) then
-		profile:Release()
-	end
+        profile:Reconcile() --> Save profile data
+
+		-- Profile is no longer in use do this
+        profile:ListenToRelease(function()
+            player:Kick('\nFailed to load saved data.\n' .. os.date('Time: %I:%M %p\nDate: %x'))
+        end)
+
+		-- Is the player still in the game??
+        if (player:IsDescendantOf(players)) then
+            cache:Add(puid, profile) --> Add player to the data cache
+
+            return profile
+        else
+            profile:Release() -- Remove session lock
+        end
+    else
+        player:Kick('\nFailed to create player data.')
+    end
 end
 
-return data
+return datastore
